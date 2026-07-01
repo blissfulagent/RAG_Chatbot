@@ -76,10 +76,10 @@ Go to `/chat`. Select **Self-RAG** mode.
 The pipeline does more work per message:
 
 1. **Retrieve** — fetch top-K chunks for the query
-2. **Grade** — Grok evaluates each chunk for relevance
+2. **Grade** — Gemini evaluates each chunk for relevance
 3. If not enough relevant chunks: **rewrite query** and retrieve again (up to `SELF_RAG_MAX_RETRIES` times)
 4. **Generate** — produce an answer from relevant chunks only
-5. **Verify** — Grok checks whether the answer is supported by the context
+5. **Verify** — Gemini checks whether the answer is supported by the context
 6. If unsupported: **honest fallback** ("I don't have enough information...")
 7. If unsupported after fallback: **human review** (see next section)
 

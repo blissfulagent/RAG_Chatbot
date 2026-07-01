@@ -1,7 +1,6 @@
 import { END, START, StateGraph } from '@langchain/langgraph'
-import { SqliteSaver } from '@langchain/langgraph-checkpoint-sqlite'
 import type { RunnableConfig } from '@langchain/core/runnables'
-import { sqlite } from '../db'
+import { checkpointer } from './checkpointer'
 import { SelfRagChatAnnotation, selfRagSubgraph } from './subgraphs/selfRag.graph'
 import type { SelfRagChatState } from './subgraphs/selfRag.graph'
 import { loadConversation } from './nodes/loadConversation'
@@ -19,10 +18,6 @@ function runId(config?: RunnableConfig): string | undefined {
 type AnyNode =
   | ((state: SelfRagChatState) => Promise<Partial<SelfRagChatState>>)
   | ((state: SelfRagChatState, config: unknown) => Promise<Partial<SelfRagChatState>>)
-
-const g = globalThis as typeof globalThis & { __selfRagCheckpointer?: SqliteSaver }
-if (!g.__selfRagCheckpointer) g.__selfRagCheckpointer = new SqliteSaver(sqlite)
-const checkpointer = g.__selfRagCheckpointer
 
 const graph = new StateGraph(SelfRagChatAnnotation)
   .addNode('loadConversation', async (state: SelfRagChatState, config?: RunnableConfig) =>

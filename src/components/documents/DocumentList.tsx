@@ -18,14 +18,31 @@ type EmbedState =
   | { status: 'error'; message: string };
 
 const STATUS_STYLES: Record<string, string> = {
-  uploaded: 'bg-gray-100 text-gray-600',
-  processing: 'bg-yellow-100 text-yellow-700',
+  uploading: 'bg-gray-100 text-gray-600',
+  embedding: 'bg-yellow-100 text-yellow-700',
   ready: 'bg-green-100 text-green-700',
   failed: 'bg-red-100 text-red-700',
 };
 
-export function DocumentList({ documents }: { documents: Document[] }) {
+export function DocumentList({
+  documents,
+  onChanged,
+}: {
+  documents: Document[];
+  onChanged?: () => void;
+}) {
   const [embedStates, setEmbedStates] = useState<Record<string, EmbedState>>({});
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  async function handleDelete(id: string) {
+    setDeletingId(id);
+    try {
+      const res = await fetch(`/api/documents/${id}`, { method: 'DELETE' });
+      if (res.ok) onChanged?.();
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   async function handleEmbed(id: string) {
     setEmbedStates((prev) => ({ ...prev, [id]: { status: 'loading' } }));
@@ -91,16 +108,23 @@ export function DocumentList({ documents }: { documents: Document[] }) {
                       disabled={es.status === 'loading'}
                       className="rounded bg-indigo-600 px-3 py-1 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
                     >
-                      {es.status === 'loading' ? 'Embedding…' : 'Embed'}
+                      {es.status === 'loading' ? 'Re-embedding…' : 'Re-embed'}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(doc.id)}
+                      disabled={deletingId === doc.id}
+                      className="rounded bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {deletingId === doc.id ? 'Deleting…' : 'Delete'}
                     </button>
                     {es.status === 'loading' && (
                       <span className="text-xs text-gray-500">
-                        Embedding may take longer the first time because the local model needs to load.
+                        Re-embedding may take longer the first time because the local model needs to load.
                       </span>
                     )}
                     {es.status === 'done' && (
                       <span className="text-xs text-green-600">
-                        {es.count === 0 ? 'Already embedded' : `Embedded ${es.count} chunks`}
+                        {`Embedded ${es.count} chunks`}
                       </span>
                     )}
                     {es.status === 'error' && (

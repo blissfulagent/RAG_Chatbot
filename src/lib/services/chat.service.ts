@@ -131,13 +131,15 @@ export function streamRagMessage(req: RagChatRequest): ReadableStream {
 
 export function streamAgentMessage(req: RagChatRequest): ReadableStream {
   const encoder = new TextEncoder()
+  const graphRunId = crypto.randomUUID()
 
   return new ReadableStream({
     async start(controller) {
       const send = (obj: object) =>
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`))
 
-      const { runId, finish, fail } = await startRun('agent-chat', req.conversationId)
+      // Use graphRunId as both thread_id (HITL checkpoint key) and runId (trace key)
+      const { finish, fail } = await startRun('agent-chat', req.conversationId, graphRunId)
 
       try {
         // Use invoke() instead of streamEvents() to avoid leaking intermediate
@@ -145,12 +147,28 @@ export function streamAgentMessage(req: RagChatRequest): ReadableStream {
         // as visible tokens in the UI.
         const result = await agentChatGraph.invoke(
           { userMessage: req.message, conversationId: req.conversationId },
-          { configurable: { runId } },
+          { configurable: { thread_id: graphRunId, runId: graphRunId } },
         )
 
         const assistantMessage = result.assistantMessage as string | undefined
         const sources = result.sources as Source[] | undefined
         const finalConversationId = result.conversationId as string | undefined
+
+        // Detect graph interrupt (human review required)
+        const graphState = await agentChatGraph.getState({
+          configurable: { thread_id: graphRunId },
+        })
+        const interrupted = graphState.tasks.some(
+          (t) => (t.interrupts ?? []).length > 0,
+        )
+        if (interrupted) {
+          const review = getReviewRequestByGraphRunId(graphRunId)
+          if (review) {
+            // Run stays 'running' while awaiting human review — finish/fail happens on resume
+            send({ type: 'review', reviewId: review.id, reason: review.reason })
+            return
+          }
+        }
 
         if (Array.isArray(sources) && sources.length > 0) {
           send({ type: 'sources', sources })

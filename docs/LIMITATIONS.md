@@ -11,8 +11,6 @@ Known constraints in the current implementation and notes on future work.
 - Embedding is CPU-bound and blocks the Node.js event loop during computation
 - In production, this should move to a dedicated embedding service or worker
 
-**O(n) similarity search** — Embeddings are stored as JSON strings in SQLite. Retrieval loads all embeddings into memory and computes cosine similarity pairwise. This works for hundreds of chunks but will not scale to thousands. A proper ANN index (e.g., sqlite-vec, pgvector, Pinecone) would replace this.
-
 ---
 
 ## Self-RAG
@@ -21,7 +19,7 @@ Known constraints in the current implementation and notes on future work.
 
 **Low relevance threshold** — `SELF_RAG_MIN_RELEVANT_CHUNKS` defaults to `1`. The system proceeds to answer generation if even one graded-relevant chunk exists. Raising this to `2` or `3` improves answer quality when documents are noisy.
 
-**Grounding and grading via Grok** — The chunk grader (`gradeRetrievedChunks`) and grounding verifier (`verifyGrounding`) both call the LLM. This adds 2–4 extra API calls per Self-RAG request compared to basic RAG.
+**Grounding and grading via Gemini** — The chunk grader (`gradeRetrievedChunks`) and grounding verifier (`verifyGrounding`) both call the LLM. This adds 2–4 extra API calls per Self-RAG request compared to basic RAG.
 
 ---
 
@@ -45,15 +43,24 @@ Known constraints in the current implementation and notes on future work.
 
 ---
 
-## Not Implemented
+## Out of Scope (Deliberate)
+
+These are intentionally not implemented in the current phase, not bugs:
 
 | Feature | Notes |
 |---------|-------|
 | Authentication | No user accounts; all conversations and reviews are shared |
-| LangSmith / Langfuse / OpenTelemetry | API keys are wired in `.env.example` but no integration code exists |
-| Streaming after HITL resume | The UI receives a `{ type:'review' }` event and stops — no push on resolution |
 | Multi-tenant conversations | All conversations are in the same DB with no user scoping |
-| Chunk deduplication | Re-embedding the same document creates duplicate chunk/embedding rows |
-| Document deletion cascade | Deleting a document does not delete its chunks or embeddings |
 | Rate limiting | No request throttling on any API route |
+| HITL push notifications | Review resolution requires polling or reloading; no push/websocket notification (see Human Review section above) |
+| LangSmith / Langfuse / OpenTelemetry | API keys are wired in `.env.example` but no integration code exists |
+
+## Future Improvements (Optional)
+
+Not required for the current scope, but worth doing later if the project grows:
+
+| Feature | Notes |
+|---------|-------|
+| Automated evaluation harness | No automated eval suite for RAG/Self-RAG answer quality yet |
+| Dedicated GuardrailSubgraph | Guardrail logic currently lives inline in `decideHumanReview`; `src/lib/guardrails/` is a placeholder for extracting it into its own subgraph |
 | Error recovery UI | Stream errors show a console message; no in-UI retry mechanism |

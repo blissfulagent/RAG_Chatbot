@@ -1,10 +1,12 @@
 import 'server-only'
 import { Command } from '@langchain/langgraph'
 import { selfRagChatGraph } from '../graph/selfRagChat.graph'
+import { agentChatGraph } from '../graph/agentChat.graph'
 import {
   getReviewRequestById,
   listPendingReviewRequests,
 } from '../db/queries/reviews'
+import { getGraphRunById } from '../db/queries/traces'
 import type { ReviewDecision, ReviewRequest } from '../../types/chat'
 
 export function getPendingReviews(): ReviewRequest[] {
@@ -20,9 +22,14 @@ async function resumeGraph(id: string, decision: ReviewDecision): Promise<void> 
   if (!review) throw new Error(`Review ${id} not found`)
   if (review.status !== 'pending') throw new Error(`Review ${id} is not pending`)
 
-  await selfRagChatGraph.invoke(new Command({ resume: decision }), {
-    configurable: { thread_id: review.graphRunId },
-  })
+  const run = getGraphRunById(review.graphRunId)
+  const config = { configurable: { thread_id: review.graphRunId } }
+
+  if (run?.graphName === 'agent-chat') {
+    await agentChatGraph.invoke(new Command({ resume: decision }), config)
+  } else {
+    await selfRagChatGraph.invoke(new Command({ resume: decision }), config)
+  }
 }
 
 export async function approveReview(id: string, feedback?: string): Promise<void> {

@@ -60,6 +60,10 @@ export function createTraceEvent(data: {
   }).run()
 }
 
+export function getGraphRunById(id: string) {
+  return db.select().from(graphRuns).where(eq(graphRuns.id, id)).get()
+}
+
 export function listGraphRuns(limit = 50) {
   return db.select().from(graphRuns).orderBy(desc(graphRuns.startedAt)).limit(limit).all()
 }

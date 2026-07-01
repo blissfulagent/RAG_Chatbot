@@ -2,13 +2,13 @@ import 'server-only'
 import { interrupt } from '@langchain/langgraph'
 import type { LangGraphRunnableConfig } from '@langchain/langgraph'
 import { insertReviewRequest } from '../../db/queries/reviews'
-import type { SelfRagChatState } from '../subgraphs/selfRag.graph'
+import type { ReviewableChatState } from './reviewable'
 import type { ReviewDecision } from '../../../types/chat'
 
 export async function createReviewRequest(
-  state: SelfRagChatState,
+  state: ReviewableChatState,
   config: LangGraphRunnableConfig,
-): Promise<Partial<SelfRagChatState>> {
+): Promise<Partial<ReviewableChatState>> {
   const reviewId = crypto.randomUUID()
   const graphRunId = config.configurable?.thread_id as string
 

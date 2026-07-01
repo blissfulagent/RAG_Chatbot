@@ -1,10 +1,9 @@
 import 'server-only';
 import { eq } from 'drizzle-orm';
 import { db } from '../index';
-import { chunks, documents } from '../schema';
+import { documents } from '../schema';
 
 type DocumentInsert = typeof documents.$inferInsert;
-type ChunkInsert = typeof chunks.$inferInsert;
 
 export async function insertDocument(data: DocumentInsert) {
   const [row] = await db.insert(documents).values(data).returning();
@@ -22,11 +21,6 @@ export async function updateDocumentStatus(
     .where(eq(documents.id, id));
 }
 
-export async function insertChunks(rows: ChunkInsert[]) {
-  if (rows.length === 0) return;
-  await db.insert(chunks).values(rows);
-}
-
 export async function listDocuments() {
   return db.select().from(documents).orderBy(documents.createdAt);
 }
@@ -36,10 +30,6 @@ export async function getDocumentById(id: string) {
   return row ?? null;
 }
 
-export async function getChunksByDocumentId(documentId: string) {
-  return db
-    .select()
-    .from(chunks)
-    .where(eq(chunks.documentId, documentId))
-    .orderBy(chunks.chunkIndex);
+export async function deleteDocumentRow(id: string) {
+  await db.delete(documents).where(eq(documents.id, id));
 }

@@ -20,7 +20,7 @@ export default async function DocumentsPage() {
       <DocumentUploader onUploaded={refresh} />
       <section className="flex flex-col gap-3">
         <h2 className="text-sm font-semibold text-gray-700">Uploaded Documents</h2>
-        <DocumentList documents={documents} />
+        <DocumentList documents={documents} onChanged={refresh} />
       </section>
       <RetrievalTester />
     </main>
